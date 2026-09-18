@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Environment variables & secrets
+.env
+.env.local
+*.secret
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Model checkpoints & large weights
+*.pt
+*.pth
+*.bin
+*.onnx
+*.safetensors
+models/weights/
+
+# Data directories (keep gitkeep)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# IDEs & OS
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*.swo
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
