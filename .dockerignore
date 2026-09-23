@@ -1,0 +1,34 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Secrets and local configurations
+.env
+.env.local
+*.secret
+
+# Git
+.git/
+.gitignore
+
+# CI / CD & Tests
+.github/
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Documentation & IDE
+.vscode/
+.idea/
+*.md
+Makefile
