@@ -1,5 +1,7 @@
+import json
 from urllib.parse import quote_plus
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -9,6 +11,9 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True
+
+    # CORS Settings (Accepts string or list, parsed to list[str])
+    CORS_ORIGINS: list[str] | str = ["*"]
 
     # MongoDB Settings
     MONGO_URI: str | None = None
@@ -25,6 +30,17 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("CORS_ORIGINS")
+    @classmethod
+    def assemble_cors_origins(cls, v: str | list[str]) -> list[str]:
+        """Support comma-separated strings or JSON arrays in .env."""
+        if isinstance(v, str):
+            stripped = v.strip()
+            if stripped.startswith("[") and stripped.endswith("]"):
+                return json.loads(stripped)
+            return [item.strip() for item in stripped.split(",") if item.strip()]
+        return v
 
     def get_mongo_uri(self) -> str:
         """Resolve MongoDB connection string from environment settings."""

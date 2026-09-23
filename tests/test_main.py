@@ -28,3 +28,13 @@ def test_health_check():
     assert "app_name" in data
     assert "version" in data
     assert "timestamp" in data
+
+
+def test_cors_headers():
+    # Test request with an Origin header
+    response = client.get("/", headers={"Origin": "http://localhost:3000"})
+    assert response.status_code == 200
+    assert (
+        response.headers.get("access-control-allow-origin") == "http://localhost:3000"
+    )
+    assert response.headers.get("access-control-allow-credentials") == "true"

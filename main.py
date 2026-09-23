@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 import uvicorn
 from fastapi import FastAPI, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from core.config import settings
@@ -25,6 +26,15 @@ app = FastAPI(
     version="0.1.0",
     description=f"Minimal FastAPI service for {settings.APP_NAME} with MongoDB Atlas",
     lifespan=lifespan,
+)
+
+# CORS Configuration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
