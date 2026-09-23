@@ -1,21 +1,12 @@
-import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 import uvicorn
-from dotenv import load_dotenv
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
 
+from core.config import settings
 from db.mongodb import close_mongo_connection, connect_to_mongo, ping_mongo
-
-# Load environment variables
-load_dotenv()
-
-APP_NAME = os.getenv("APP_NAME", "Sam AI")
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8000"))
-DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 
 @asynccontextmanager
@@ -30,9 +21,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title=APP_NAME,
+    title=settings.APP_NAME,
     version="0.1.0",
-    description="Minimal FastAPI service for Sam AI with MongoDB Atlas",
+    description=f"Minimal FastAPI service for {settings.APP_NAME} with MongoDB Atlas",
     lifespan=lifespan,
 )
 
@@ -48,7 +39,7 @@ class HealthResponse(BaseModel):
 @app.get("/", tags=["General"])
 def read_root():
     return {
-        "message": f"Welcome to {APP_NAME}!",
+        "message": f"Welcome to {settings.APP_NAME}!",
         "docs": "/docs",
         "health": "/health",
     }
@@ -65,7 +56,7 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         database="connected" if is_db_connected else "disconnected",
-        app_name=APP_NAME,
+        app_name=settings.APP_NAME,
         version="0.1.0",
         timestamp=datetime.now(timezone.utc).isoformat(),
     )
@@ -74,7 +65,7 @@ async def health_check():
 if __name__ == "__main__":
     uvicorn.run(
         "main:app",
-        host=HOST,
-        port=PORT,
-        reload=DEBUG,
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.DEBUG,
     )

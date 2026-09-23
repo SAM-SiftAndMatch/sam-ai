@@ -1,47 +1,12 @@
 import logging
-import os
-from urllib.parse import quote_plus
 
-from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.server_api import ServerApi
 
-load_dotenv()
+from core.config import settings
 
 logger = logging.getLogger("sam_ai.db")
 logging.basicConfig(level=logging.INFO)
-
-# Environment variables
-MONGO_URI = os.getenv("MONGO_URI")
-MONGO_HOST = os.getenv("MONGO_HOST", "localhost")
-MONGO_PORT = os.getenv("MONGO_PORT", "27017")
-MONGO_USERNAME = os.getenv("MONGO_USERNAME")
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "sam_ai_db")
-MONGO_AUTH_SOURCE = os.getenv("MONGO_AUTH_SOURCE", "admin")
-MONGO_IS_SRV = os.getenv("MONGO_IS_SRV", "False").lower() in ("true", "1", "yes")
-
-
-def get_mongo_uri() -> str:
-    """Resolve MongoDB connection string from environment."""
-    if MONGO_URI:
-        return MONGO_URI
-
-    # Construct URI from individual variables
-    auth_part = ""
-    if MONGO_USERNAME and MONGO_PASSWORD:
-        encoded_user = quote_plus(MONGO_USERNAME)
-        encoded_pass = quote_plus(MONGO_PASSWORD)
-        auth_part = f"{encoded_user}:{encoded_pass}@"
-
-    # Auto-detect SRV (e.g. MongoDB Atlas)
-    is_srv = MONGO_IS_SRV or (MONGO_HOST and "mongodb.net" in MONGO_HOST)
-
-    if is_srv:
-        return f"mongodb+srv://{auth_part}{MONGO_HOST}/{MONGO_DB_NAME}?retryWrites=true&w=majority"
-
-    auth_source_param = f"?authSource={MONGO_AUTH_SOURCE}" if auth_part else ""
-    return f"mongodb://{auth_part}{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}{auth_source_param}"
 
 
 class MongoDBManager:
@@ -54,7 +19,8 @@ db_manager = MongoDBManager()
 
 async def connect_to_mongo():
     """Initialize connection to MongoDB server."""
-    uri = get_mongo_uri()
+    uri = settings.get_mongo_uri()
+
     # Mask password for secure logging
     masked_uri = uri
     if "@" in uri and "://" in uri:
@@ -72,12 +38,13 @@ async def connect_to_mongo():
             server_api=server_api,
             serverSelectionTimeoutMS=5000,
         )
-        db_manager.db = db_manager.client[MONGO_DB_NAME]
+        db_manager.db = db_manager.client[settings.MONGO_DB_NAME]
 
         # Verify connection by pinging server
         await db_manager.client.admin.command("ping")
         logger.info(
-            "Successfully connected to MongoDB server! (Database: '%s')", MONGO_DB_NAME
+            "Successfully connected to MongoDB server! (Database: '%s')",
+            settings.MONGO_DB_NAME,
         )
     except Exception as e:
         logger.error("Failed to connect to MongoDB: %s", str(e))
