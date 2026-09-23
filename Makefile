@@ -25,7 +25,7 @@ install-dev: ## Cài đặt toàn bộ dependencies (bao gồm dev, test, lint)
 	$(PIP) install -r requirements-dev.txt
 
 dev: ## Chạy server FastAPI ở chế độ development (auto-reload)
-	$(UVICORN) main:app --reload --host 0.0.0.0 --port 8000
+	$(UVICORN) app.main:app --reload --host 0.0.0.0 --port 8000
 
 run: ## Chạy server FastAPI production
 	$(PYTHON) main.py

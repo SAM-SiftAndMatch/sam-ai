@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from app.main import app
 
 client = TestClient(app)
 
@@ -12,6 +12,7 @@ def test_read_root():
     assert "message" in data
     assert "health" in data
     assert data["health"] == "/health"
+    assert "api_v1" in data
 
 
 def test_favicon():
@@ -28,6 +29,14 @@ def test_health_check():
     assert "app_name" in data
     assert "version" in data
     assert "timestamp" in data
+
+
+def test_api_v1_health_check():
+    response = client.get("/api/v1/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+    assert "database" in data
 
 
 def test_cors_headers():

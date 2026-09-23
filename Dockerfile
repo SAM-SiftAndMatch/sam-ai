@@ -23,8 +23,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Copy application source code
 COPY main.py .
-COPY db/ db/
-COPY core/ core/
+COPY app/ app/
 
 # Change ownership to non-root user
 RUN chown -R appuser:appuser /app

@@ -3,7 +3,7 @@ import logging
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.server_api import ServerApi
 
-from core.config import settings
+from app.core.config import settings
 
 logger = logging.getLogger("sam_ai.db")
 logging.basicConfig(level=logging.INFO)

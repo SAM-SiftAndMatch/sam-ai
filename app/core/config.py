@@ -8,11 +8,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # App Settings
     APP_NAME: str = "Sam AI"
+    API_V1_PREFIX: str = "/api/v1"
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     DEBUG: bool = True
 
-    # CORS Settings (Accepts string or list, parsed to list[str])
+    # CORS Settings
     CORS_ORIGINS: list[str] | str = ["*"]
 
     # MongoDB Settings

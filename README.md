@@ -1,6 +1,39 @@
 # Sam AI
 
-Dự án FastAPI phục vụ kiểm tra health check, kết nối MongoDB Atlas, hỗ trợ Docker, CI/CD và Git Hooks.
+Dự án FastAPI phục vụ kiểm tra health check, kết nối MongoDB Atlas, hỗ trợ Docker, CI/CD và Git Hooks theo mô hình cấu trúc phân tầng (Clean / Layered Architecture).
+
+---
+
+## 📁 Cấu trúc thư mục dự án
+
+```text
+sam-ai/
+├── app/                      # Mã nguồn chính của ứng dụng
+│   ├── api/                  # Tầng định tuyến (Routing)
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   │   └── health.py # Endpoint kiểm tra sức khỏe hệ thống
+│   │   │   └── router.py     # Gom các endpoints v1
+│   │   └── router.py         # Router tổng hợp toàn bộ API
+│   ├── core/                 # Cấu hình hệ thống & bảo mật
+│   │   └── config.py         # Quản lý cấu hình bằng pydantic-settings
+│   ├── db/                   # Tầng kết nối cơ sở dữ liệu
+│   │   └── mongodb.py        # Quản lý kết nối Motor Async MongoDB Atlas
+│   ├── schemas/              # Pydantic schemas (Request / Response models)
+│   │   └── health.py         # Schema HealthResponse
+│   ├── services/             # Business Logic & AI Pipelines (sẵn sàng mở rộng)
+│   ├── models/               # MongoDB Document Models (sẵn sàng mở rộng)
+│   └── main.py               # Khởi tạo FastAPI App, CORS, Lifespan & Middleware
+├── tests/                    # Unit tests tự động với pytest
+│   └── test_main.py
+├── .github/workflows/        # CI/CD pipelines (ci-pr.yml, ci-main.yml)
+├── main.py                   # File entrypoint mỏng gọi server
+├── pyproject.toml            # File cấu hình trung tâm (Project, Ruff, Pytest)
+├── Makefile                  # Bộ phím tắt quản lý toàn bộ dự án
+├── Dockerfile                # Image build tối ưu production
+├── docker-compose.yml        # Điều phối container
+└── requirements.txt          # Danh sách thư viện chính
+```
 
 ---
 
@@ -24,7 +57,7 @@ make compose-down       # Dừng Docker Compose
 ## 📦 Cài đặt thư viện
 
 Môi trường ảo (virtualenv) `.venv` đã được cài đặt sẵn:
-- **Core**: `fastapi`, `uvicorn[standard]`, `pydantic`, `python-dotenv`, `motor`
+- **Core**: `fastapi`, `uvicorn[standard]`, `pydantic`, `pydantic-settings`, `python-dotenv`, `motor`
 - **Dev**: `pytest`, `pytest-asyncio`, `httpx`, `ruff`, `pre-commit`
 
 Cài đặt bằng Makefile:
@@ -34,10 +67,17 @@ make install-dev
 
 ---
 
-## ⚙️ Cấu hình MongoDB (.env)
+## ⚙️ Cấu hình MongoDB & CORS (.env)
 
-Cấu hình kết nối tới MongoDB Atlas đã được lưu trong `.env`:
+Cấu hình lưu trong `.env`:
 ```env
+APP_NAME="Sam AI"
+HOST=0.0.0.0
+PORT=8000
+DEBUG=True
+
+CORS_ORIGINS="*"
+
 MONGO_URI=mongodb+srv://<username>:<password>@ai-data.jkjhbcq.mongodb.net/?retryWrites=true&w=majority
 MONGO_DB_NAME=sam_ai_db
 ```
@@ -82,6 +122,6 @@ make compose-down
 ## 🔍 Kiểm tra API
 
 - **Trang chủ**: `http://localhost:8000/`
-- **Kiểm tra Health & DB**: `http://localhost:8000/health` (trả về trạng thái `database: "connected"`)
+- **Kiểm tra Health**: `http://localhost:8000/health` hoặc `http://localhost:8000/api/v1/health`
 - **Swagger UI (Docs tương tác)**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
