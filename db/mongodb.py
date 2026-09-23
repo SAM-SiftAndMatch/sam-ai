@@ -1,9 +1,10 @@
-import os
 import logging
+import os
 from urllib.parse import quote_plus
+
+from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from pymongo.server_api import ServerApi
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -38,9 +39,9 @@ def get_mongo_uri() -> str:
 
     if is_srv:
         return f"mongodb+srv://{auth_part}{MONGO_HOST}/{MONGO_DB_NAME}?retryWrites=true&w=majority"
-    else:
-        auth_source_param = f"?authSource={MONGO_AUTH_SOURCE}" if auth_part else ""
-        return f"mongodb://{auth_part}{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}{auth_source_param}"
+
+    auth_source_param = f"?authSource={MONGO_AUTH_SOURCE}" if auth_part else ""
+    return f"mongodb://{auth_part}{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB_NAME}{auth_source_param}"
 
 
 class MongoDBManager:
@@ -58,7 +59,7 @@ async def connect_to_mongo():
     masked_uri = uri
     if "@" in uri and "://" in uri:
         protocol, rest = uri.split("://", 1)
-        creds, host = rest.split("@", 1)
+        _, host = rest.split("@", 1)
         masked_uri = f"{protocol}://***:***@{host}"
 
     logger.info("Connecting to MongoDB at: %s ...", masked_uri)
@@ -75,10 +76,12 @@ async def connect_to_mongo():
 
         # Verify connection by pinging server
         await db_manager.client.admin.command("ping")
-        logger.info("Successfully connected to MongoDB server! (Database: '%s')", MONGO_DB_NAME)
+        logger.info(
+            "Successfully connected to MongoDB server! (Database: '%s')", MONGO_DB_NAME
+        )
     except Exception as e:
         logger.error("Failed to connect to MongoDB: %s", str(e))
-        raise e
+        raise
 
 
 async def close_mongo_connection():
@@ -112,5 +115,5 @@ async def ping_mongo() -> bool:
     try:
         await db_manager.client.admin.command("ping")
         return True
-    except Exception:
+    except Exception:  # noqa: BLE001
         return False

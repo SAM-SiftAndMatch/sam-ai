@@ -1,8 +1,13 @@
-from db.mongodb import connect_to_mongo, close_mongo_connection, get_database, ping_mongo
+from db.mongodb import (
+    close_mongo_connection,
+    connect_to_mongo,
+    get_database,
+    ping_mongo,
+)
 
 __all__ = [
-    "connect_to_mongo",
     "close_mongo_connection",
+    "connect_to_mongo",
     "get_database",
     "ping_mongo",
 ]

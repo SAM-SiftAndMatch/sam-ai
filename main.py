@@ -1,19 +1,20 @@
 import os
-from datetime import datetime, timezone
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
+
+import uvicorn
 from dotenv import load_dotenv
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
-import uvicorn
 
-from db.mongodb import connect_to_mongo, close_mongo_connection, ping_mongo
+from db.mongodb import close_mongo_connection, connect_to_mongo, ping_mongo
 
 # Load environment variables
 load_dotenv()
 
 APP_NAME = os.getenv("APP_NAME", "Sam AI")
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", 8000))
+PORT = int(os.getenv("PORT", "8000"))
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
 
@@ -22,7 +23,7 @@ async def lifespan(app: FastAPI):
     """Manage application startup and shutdown events."""
     try:
         await connect_to_mongo()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print(f"[Warning] Could not connect to MongoDB on startup: {e}")
     yield
     await close_mongo_connection()
@@ -56,7 +57,6 @@ def read_root():
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return Response(status_code=204)
-
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Health"])

@@ -1,0 +1,85 @@
+name: CI - Main Branch
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Run Ruff Linter
+        run: |
+          ruff check .
+
+      - name: Check Code Formatting
+        run: |
+          ruff format --check .
+
+      - name: Run Unit Tests
+        env:
+          MONGO_HOST: localhost
+          MONGO_PORT: 27017
+          MONGO_DB_NAME: sam_ai_test_db
+        run: |
+          pytest -v
+
+  docker-build:
+    name: Build & Verify Docker Image
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: sam-ai:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test Docker Container Health
+        run: |
+          # Run container in background with dummy env vars
+          docker run -d --name test_app -p 8000:8000 \
+            -e APP_NAME="Sam AI CI" \
+            -e HOST=0.0.0.0 \
+            -e PORT=8000 \
+            -e DEBUG=False \
+            sam-ai:latest
+
+          # Wait for container startup
+          sleep 5
+
+          # Test healthcheck endpoint
+          curl --retry 5 --retry-connrefused --retry-delay 2 -f http://localhost:8000/health || (docker logs test_app && exit 1)
+
+          # Clean up container
+          docker stop test_app && docker rm test_app
