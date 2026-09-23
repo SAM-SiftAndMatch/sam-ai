@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import uvicorn
 from fastapi import FastAPI, Response
@@ -68,7 +68,7 @@ async def health_check():
         database="connected" if is_db_connected else "disconnected",
         app_name=settings.APP_NAME,
         version="0.1.0",
-        timestamp=datetime.now(timezone.utc).isoformat(),
+        timestamp=datetime.now(UTC).isoformat(),
     )
 
 
