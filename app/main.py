@@ -2,10 +2,18 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
 from app.api.router import api_router
 from app.core.config import settings
+from app.core.exceptions import register_exception_handlers
+from app.core.logging import setup_logging
+from app.core.middlewares import RequestLoggingMiddleware, SecurityHeadersMiddleware
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.db.mongodb import close_mongo_connection, connect_to_mongo
+
+# Initialize application logging
+setup_logging(debug=settings.DEBUG)
 
 
 @asynccontextmanager
@@ -20,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 def create_app() -> FastAPI:
-    """Application factory for Sam AI."""
+    """Application factory for Sam AI with security & production middleware."""
     app_instance = FastAPI(
         title=settings.APP_NAME,
         version="0.1.0",
@@ -28,7 +36,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS Configuration
+    # Attach rate limiter state & handler
+    app_instance.state.limiter = limiter
+    app_instance.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
+
+    # Register centralized exception handlers
+    register_exception_handlers(app_instance)
+
+    # Middlewares (Executed in reverse order of addition: Security -> Logging -> CORS)
+    app_instance.add_middleware(SecurityHeadersMiddleware)
+    app_instance.add_middleware(RequestLoggingMiddleware)
     app_instance.add_middleware(
         CORSMiddleware,
         allow_origins=settings.CORS_ORIGINS,

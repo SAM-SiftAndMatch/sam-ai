@@ -51,6 +51,7 @@ docker-build: ## Build Docker image cho API
 	docker build -t $(IMAGE_NAME) .
 
 docker-run: ## Chạy Docker container đơn lẻ
+	docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
 	docker run -d --name $(CONTAINER_NAME) -p 8000:8000 --env-file .env $(IMAGE_NAME)
 
 docker-stop: ## Dừng và xóa Docker container

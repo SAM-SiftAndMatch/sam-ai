@@ -15,6 +15,7 @@ dependencies = [
     "pydantic-settings>=2.2.0",
     "python-dotenv>=1.0.0",
     "motor>=3.4.0",
+    "slowapi>=0.1.10",
 ]
 
 [project.optional-dependencies]

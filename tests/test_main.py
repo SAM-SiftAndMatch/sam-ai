@@ -40,10 +40,41 @@ def test_api_v1_health_check():
 
 
 def test_cors_headers():
-    # Test request with an Origin header
     response = client.get("/", headers={"Origin": "http://localhost:3000"})
     assert response.status_code == 200
     assert (
         response.headers.get("access-control-allow-origin") == "http://localhost:3000"
     )
     assert response.headers.get("access-control-allow-credentials") == "true"
+
+
+def test_request_id_and_process_time_headers():
+    response = client.get("/")
+    assert "x-request-id" in response.headers
+    assert "x-process-time" in response.headers
+    assert response.headers["x-process-time"].endswith("ms")
+
+
+def test_custom_request_id():
+    custom_id = "test-client-id-12345"
+    response = client.get("/", headers={"X-Request-ID": custom_id})
+    assert response.headers.get("x-request-id") == custom_id
+
+
+def test_security_headers():
+    response = client.get("/")
+    assert response.headers.get("x-content-type-options") == "nosniff"
+    assert response.headers.get("x-frame-options") == "DENY"
+    assert response.headers.get("x-xss-protection") == "1; mode=block"
+    assert response.headers.get("referrer-policy") == "strict-origin-when-cross-origin"
+
+
+def test_standardized_error_format_404():
+    response = client.get("/non-existent-endpoint")
+    assert response.status_code == 404
+    data = response.json()
+    assert "error" in data
+    assert data["error"]["code"] == "NOT_FOUND"
+    assert "message" in data["error"]
+    assert "request_id" in data["error"]
+    assert "timestamp" in data["error"]

@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     # CORS Settings
     CORS_ORIGINS: list[str] | str = ["*"]
 
+    # Rate Limiting Settings
+    RATE_LIMIT_ENABLED: bool = True
+    DEFAULT_RATE_LIMIT: str = "100/minute"
+
     # MongoDB Settings
     MONGO_URI: str | None = None
     MONGO_HOST: str = "localhost"
