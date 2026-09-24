@@ -75,11 +75,20 @@ jobs:
             -e DEBUG=False \
             sam-ai:latest
 
-          # Wait for container startup
-          sleep 5
+          # Wait for container startup with retry loop
+          echo "Waiting for container to become healthy..."
+          for i in {1..15}; do
+            if curl -sf http://localhost:8000/health; then
+              echo ""
+              echo "Container health check passed successfully!"
+              docker stop test_app && docker rm test_app
+              exit 0
+            fi
+            echo "Waiting for app to start ($i/15)..."
+            sleep 2
+          done
 
-          # Test healthcheck endpoint
-          curl --retry 5 --retry-connrefused --retry-delay 2 -f http://localhost:8000/health || (docker logs test_app && exit 1)
-
-          # Clean up container
+          echo "Container health check timed out!"
+          docker logs test_app
           docker stop test_app && docker rm test_app
+          exit 1

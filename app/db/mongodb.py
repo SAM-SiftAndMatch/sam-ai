@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
@@ -33,22 +34,23 @@ async def connect_to_mongo():
     try:
         # Use ServerApi version 1 for MongoDB Atlas compatibility
         server_api = ServerApi("1")
-        db_manager.client = AsyncIOMotorClient(
+        client = AsyncIOMotorClient(
             uri,
             server_api=server_api,
-            serverSelectionTimeoutMS=5000,
+            serverSelectionTimeoutMS=2000,
         )
-        db_manager.db = db_manager.client[settings.MONGO_DB_NAME]
-
-        # Verify connection by pinging server
-        await db_manager.client.admin.command("ping")
+        # Verify connection with a short 2.0s timeout
+        await asyncio.wait_for(client.admin.command("ping"), timeout=2.0)
+        db_manager.client = client
+        db_manager.db = client[settings.MONGO_DB_NAME]
         logger.info(
             "Successfully connected to MongoDB server! (Database: '%s')",
             settings.MONGO_DB_NAME,
         )
     except Exception as e:
-        logger.error("Failed to connect to MongoDB: %s", str(e))
-        raise
+        logger.warning("Could not connect to MongoDB on startup: %s", str(e))
+        db_manager.client = None
+        db_manager.db = None
 
 
 async def close_mongo_connection():
@@ -80,7 +82,7 @@ async def ping_mongo() -> bool:
     if db_manager.client is None:
         return False
     try:
-        await db_manager.client.admin.command("ping")
+        await asyncio.wait_for(db_manager.client.admin.command("ping"), timeout=1.5)
         return True
     except Exception:  # noqa: BLE001
         return False
