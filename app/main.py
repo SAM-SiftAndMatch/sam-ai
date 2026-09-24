@@ -19,10 +19,7 @@ setup_logging(debug=settings.DEBUG)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application startup and shutdown events."""
-    try:
-        await connect_to_mongo()
-    except Exception as e:  # noqa: BLE001
-        print(f"[Warning] Could not connect to MongoDB on startup: {e}")
+    await connect_to_mongo()
     yield
     await close_mongo_connection()
 
