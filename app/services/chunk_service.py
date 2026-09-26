@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.models.chunk import ChunkDocument
 from app.schemas.chunk import ChunkStatsResponse
+
+logger = logging.getLogger("sam_ai.chunks")
 
 
 class ChunkService:
@@ -92,9 +95,12 @@ class ChunkService:
                 )
             if results:
                 return results
-        except Exception:
+        except Exception as exc:
             # Fallback to in-memory cosine similarity if Atlas Index is not configured yet
-            pass
+            logger.warning(
+                "Atlas vector search unavailable or unindexed, falling back to in-memory cosine similarity: %s",
+                exc,
+            )
 
         # 2. In-memory Cosine Similarity fallback
         import math

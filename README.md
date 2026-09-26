@@ -12,20 +12,26 @@ sam-ai/
 │   ├── api/                  # Tầng định tuyến (Routing)
 │   │   ├── v1/
 │   │   │   ├── endpoints/
-│   │   │   │   └── health.py # Endpoint kiểm tra sức khỏe hệ thống
+│   │   │   │   ├── health.py # Endpoint kiểm tra sức khỏe hệ thống
+│   │   │   │   └── chunks.py # Endpoints quản lý & tìm kiếm tri thức (Chunks)
 │   │   │   └── router.py     # Gom các endpoints v1
 │   │   └── router.py         # Router tổng hợp toàn bộ API
 │   ├── core/                 # Cấu hình hệ thống & bảo mật
-│   │   └── config.py         # Quản lý cấu hình bằng pydantic-settings
+│   │   ├── config.py         # Quản lý cấu hình bằng pydantic-settings
+│   │   ├── logging.py        # Cấu hình logging có request_id
+│   │   ├── middlewares.py    # Request logging & Security headers middleware
+│   │   └── rate_limit.py     # Cấu hình rate limit với slowapi
 │   ├── db/                   # Tầng kết nối cơ sở dữ liệu
 │   │   └── mongodb.py        # Quản lý kết nối Motor Async MongoDB Atlas
+│   ├── models/               # MongoDB Document Models (ChunkDocument)
 │   ├── schemas/              # Pydantic schemas (Request / Response models)
-│   │   └── health.py         # Schema HealthResponse
-│   ├── services/             # Business Logic & AI Pipelines (sẵn sàng mở rộng)
-│   ├── models/               # MongoDB Document Models (sẵn sàng mở rộng)
-│   └── main.py               # Khởi tạo FastAPI App, CORS, Lifespan & Middleware
+│   └── services/             # Business Logic & AI Pipelines (ChunkService, EmbeddingService)
+├── data/                     # Dữ liệu nguồn (kb-chunks.jsonl)
+├── scripts/                  # CLI scripts quản trị dữ liệu
+│   ├── seed_chunks.py        # Seed dữ liệu JSONL vào MongoDB Atlas
+│   ├── embed_chunks.py       # Batch embedding qua Ollama (bge-m3)
+│   └── reformat_chunks.py    # Phân loại và chuẩn hóa chunks
 ├── tests/                    # Unit tests tự động với pytest
-│   └── test_main.py
 ├── .github/workflows/        # CI/CD pipelines (ci-pr.yml, ci-main.yml)
 ├── main.py                   # File entrypoint mỏng gọi server
 ├── pyproject.toml            # File cấu hình trung tâm (Project, Ruff, Pytest)
@@ -57,8 +63,8 @@ make compose-down       # Dừng Docker Compose
 ## 📦 Cài đặt thư viện
 
 Môi trường ảo (virtualenv) `.venv` đã được cài đặt sẵn:
-- **Core**: `fastapi`, `uvicorn[standard]`, `pydantic`, `pydantic-settings`, `python-dotenv`, `motor`
-- **Dev**: `pytest`, `pytest-asyncio`, `httpx`, `ruff`, `pre-commit`
+- **Core**: `fastapi`, `uvicorn[standard]`, `pydantic`, `pydantic-settings`, `python-dotenv`, `motor`, `slowapi`, `httpx`
+- **Dev**: `pytest`, `pytest-asyncio`, `ruff`, `pre-commit`
 
 Cài đặt bằng Makefile:
 ```bash
@@ -67,9 +73,9 @@ make install-dev
 
 ---
 
-## ⚙️ Cấu hình MongoDB & CORS (.env)
+## ⚙️ Cấu hình Môi trường (.env)
 
-Cấu hình lưu trong `.env`:
+Cấu hình mẫu trong `.env`:
 ```env
 APP_NAME="Sam AI"
 HOST=0.0.0.0
@@ -78,8 +84,17 @@ DEBUG=True
 
 CORS_ORIGINS="*"
 
+# MongoDB Atlas
 MONGO_URI=mongodb+srv://<username>:<password>@ai-data.jkjhbcq.mongodb.net/?retryWrites=true&w=majority
 MONGO_DB_NAME=sam_ai_db
+
+# Ollama & Embedding
+OLLAMA_HOST=localhost
+OLLAMA_PORT=11434
+OLLAMA_BASE_URL=http://localhost:11434
+EMBEDDING_MODEL=bge-m3
+EMBEDDING_DIMENSIONS=1024
+VECTOR_INDEX_NAME=chunks_vector_index
 ```
 
 ---
@@ -125,3 +140,29 @@ make compose-down
 - **Kiểm tra Health**: `http://localhost:8000/health` hoặc `http://localhost:8000/api/v1/health`
 - **Swagger UI (Docs tương tác)**: `http://localhost:8000/docs`
 - **ReDoc**: `http://localhost:8000/redoc`
+
+---
+
+## 📚 Knowledge Chunks & Semantic Vector Search
+
+Hệ thống quản lý dữ liệu tri thức sản phẩm phục vụ Smart Brief Wizard:
+
+### 1. Quản lý dữ liệu qua CLI Scripts
+- **Seed dữ liệu vào MongoDB Atlas**:
+  ```bash
+  python scripts/seed_chunks.py --file data/kb-chunks.jsonl
+  ```
+- **Sinh vector embedding với Ollama (`bge-m3`)**:
+  ```bash
+  python scripts/embed_chunks.py --file data/kb-chunks.jsonl --batch-size 10
+  ```
+
+### 2. Danh sách Chunks API (`/api/v1/chunks`)
+| Phương thức | Endpoint | Mô tả |
+|-------------|----------|-------|
+| `GET` | `/api/v1/chunks` | Lấy danh sách chunks có phân trang & bộ lọc (`category`, `dimension`) |
+| `GET` | `/api/v1/chunks/universal` | Lấy các chunks universal (`always_include=True`) |
+| `GET` | `/api/v1/chunks/context` | Lấy context 2 tầng (Universal + Category-Specific) |
+| `GET` | `/api/v1/chunks/stats` | Thống kê số lượng chunks theo category, dimension, source |
+| `POST` | `/api/v1/chunks/search` | Tìm kiếm ngữ nghĩa vector (Hybrid: Atlas Vector Search + Cosine fallback) |
+| `GET` | `/api/v1/chunks/{chunk_id}` | Lấy chi tiết một chunk theo hash ID |

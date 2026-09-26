@@ -74,7 +74,7 @@ class ChunkDocument(BaseModel):
     )
     embedding: list[float] | None = Field(
         default=None,
-        description="Vector embedding (e.g. 1536-dim for OpenAI ada-002). Phase 2.",
+        description="Vector embedding (1024-dim for Ollama bge-m3).",
     )
     metadata: ChunkMetadata
 

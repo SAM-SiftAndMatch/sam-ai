@@ -12,7 +12,6 @@ from app.schemas.chunk import (
     ChunkSearchRequest,
     ChunkSearchResponse,
     ChunkStatsResponse,
-    SeedResponse,
 )
 from app.services.chunk_service import ChunkService
 
@@ -196,38 +195,3 @@ async def get_chunk_by_id(
         embedding=item.embedding,
         metadata=item.metadata,
     )
-
-
-@router.post(
-    "/seed",
-    response_model=SeedResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Seed chunks from JSONL",
-    description="Load and upsert chunk records from a JSONL file into MongoDB.",
-)
-async def seed_chunks(
-    file_path: str = Query(
-        default="data/kb-chunks.jsonl",
-        description="Path to JSONL file on server",
-    ),
-    drop_first: bool = Query(
-        default=False,
-        description="Drop existing collection before seeding",
-    ),
-    service: ChunkService = Depends(get_chunk_service),
-) -> SeedResponse:
-    try:
-        result = await service.seed_from_jsonl(
-            file_path=file_path, drop_first=drop_first
-        )
-        return SeedResponse(**result)
-    except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to seed chunks: {e}",
-        ) from e
