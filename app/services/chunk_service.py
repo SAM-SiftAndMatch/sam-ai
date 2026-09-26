@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +9,8 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.models.chunk import ChunkDocument
 from app.schemas.chunk import ChunkStatsResponse
+
+logger = logging.getLogger("sam_ai.chunks")
 
 
 class ChunkService:
@@ -39,6 +42,98 @@ class ChunkService:
         if category:
             category_chunks = await self.get_category_chunks(category)
         return universal_chunks, category_chunks
+
+    async def semantic_search(
+        self,
+        query_text: str,
+        category: str | None = None,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        """Perform semantic vector search using MongoDB Atlas $vectorSearch,
+
+        with automatic in-memory cosine similarity fallback.
+        """
+        from app.core.config import settings
+        from app.services.embedding_service import embedding_service
+
+        query_vector = await embedding_service.get_embedding(query_text)
+
+        # 1. Try native Atlas $vectorSearch
+        vector_search_stage: dict[str, Any] = {
+            "index": settings.VECTOR_INDEX_NAME,
+            "path": "embedding",
+            "queryVector": query_vector,
+            "numCandidates": max(limit * 10, 50),
+            "limit": limit,
+        }
+        if category:
+            vector_search_stage["filter"] = {"metadata.category": category}
+
+        pipeline = [
+            {"$vectorSearch": vector_search_stage},
+            {
+                "$project": {
+                    "_id": 1,
+                    "text": 1,
+                    "metadata": 1,
+                    "score": {"$meta": "vectorSearchScore"},
+                }
+            },
+        ]
+
+        try:
+            cursor = self.collection.aggregate(pipeline)
+            results = []
+            async for doc in cursor:
+                results.append(
+                    {
+                        "id": str(doc["_id"]),
+                        "text": doc["text"],
+                        "metadata": doc["metadata"],
+                        "score": round(float(doc.get("score", 0.0)), 4),
+                    }
+                )
+            if results:
+                return results
+        except Exception as exc:
+            # Fallback to in-memory cosine similarity if Atlas Index is not configured yet
+            logger.warning(
+                "Atlas vector search unavailable or unindexed, falling back to in-memory cosine similarity: %s",
+                exc,
+            )
+
+        # 2. In-memory Cosine Similarity fallback
+        import math
+
+        def _cosine(v1: list[float], v2: list[float]) -> float:
+            dot = sum(a * b for a, b in zip(v1, v2, strict=True))
+            norm_a = math.sqrt(sum(a * a for a in v1))
+            norm_b = math.sqrt(sum(b * b for b in v2))
+            return dot / (norm_a * norm_b) if norm_a and norm_b else 0.0
+
+        query: dict[str, Any] = {"embedding": {"$ne": None}}
+        if category:
+            query["metadata.category"] = category
+
+        candidates = []
+        async for doc in self.collection.find(query):
+            doc_emb = doc.get("embedding")
+            if doc_emb and len(doc_emb) == len(query_vector):
+                score = _cosine(query_vector, doc_emb)
+                candidates.append((score, doc))
+
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        top_candidates = candidates[:limit]
+
+        return [
+            {
+                "id": str(doc["_id"]),
+                "text": doc["text"],
+                "metadata": doc["metadata"],
+                "score": round(score, 4),
+            }
+            for score, doc in top_candidates
+        ]
 
     async def get_chunks(
         self,

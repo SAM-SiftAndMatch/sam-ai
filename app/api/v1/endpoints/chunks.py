@@ -5,10 +5,13 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.db.mongodb import get_database
 from app.schemas.chunk import (
+    ChunkContextResponse,
     ChunkListResponse,
     ChunkResponse,
+    ChunkSearchItem,
+    ChunkSearchRequest,
+    ChunkSearchResponse,
     ChunkStatsResponse,
-    SeedResponse,
 )
 from app.services.chunk_service import ChunkService
 
@@ -89,6 +92,88 @@ async def get_stats(
 
 
 @router.get(
+    "/context",
+    response_model=ChunkContextResponse,
+    summary="Get 2-tier context for brief generation",
+    description="Retrieve universal chunks alongside category-specific chunks for brief generation wizard.",
+)
+async def get_brief_context(
+    category: str | None = Query(
+        default=None,
+        description="Target category (e.g. 'website_ban_hang', 'crm', 'app_dat_lich')",
+    ),
+    service: ChunkService = Depends(get_chunk_service),
+) -> ChunkContextResponse:
+    universal, cat_specific = await service.get_brief_context(category=category)
+    return ChunkContextResponse(
+        universal=[
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in universal
+        ],
+        category_specific=[
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in cat_specific
+        ],
+    )
+
+
+@router.post(
+    "/search",
+    response_model=ChunkSearchResponse,
+    summary="Semantic vector search",
+    description="Search chunks using Ollama bge-m3 dense vector embeddings and MongoDB Atlas Vector Search.",
+)
+async def semantic_search(
+    body: ChunkSearchRequest,
+    service: ChunkService = Depends(get_chunk_service),
+) -> ChunkSearchResponse:
+    universal_items: list[ChunkResponse] = []
+    if body.include_universal:
+        raw_universal = await service.get_universal_chunks()
+        universal_items = [
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in raw_universal
+        ]
+
+    search_results = await service.semantic_search(
+        query_text=body.query,
+        category=body.category,
+        limit=body.limit,
+    )
+    relevant_items = [
+        ChunkSearchItem(
+            id=item["id"],
+            text=item["text"],
+            metadata=item["metadata"],
+            score=item.get("score"),
+        )
+        for item in search_results
+    ]
+
+    return ChunkSearchResponse(
+        query=body.query,
+        universal=universal_items,
+        relevant_chunks=relevant_items,
+        total_relevant=len(relevant_items),
+    )
+
+
+@router.get(
     "/{chunk_id}",
     response_model=ChunkResponse,
     summary="Get chunk by ID",
@@ -110,38 +195,3 @@ async def get_chunk_by_id(
         embedding=item.embedding,
         metadata=item.metadata,
     )
-
-
-@router.post(
-    "/seed",
-    response_model=SeedResponse,
-    status_code=status.HTTP_200_OK,
-    summary="Seed chunks from JSONL",
-    description="Load and upsert chunk records from a JSONL file into MongoDB.",
-)
-async def seed_chunks(
-    file_path: str = Query(
-        default="data/kb-chunks.jsonl",
-        description="Path to JSONL file on server",
-    ),
-    drop_first: bool = Query(
-        default=False,
-        description="Drop existing collection before seeding",
-    ),
-    service: ChunkService = Depends(get_chunk_service),
-) -> SeedResponse:
-    try:
-        result = await service.seed_from_jsonl(
-            file_path=file_path, drop_first=drop_first
-        )
-        return SeedResponse(**result)
-    except FileNotFoundError as e:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to seed chunks: {e}",
-        ) from e
