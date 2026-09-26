@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     MONGO_AUTH_SOURCE: str = "admin"
     MONGO_IS_SRV: bool = False
 
+    # Ollama & Embedding Settings
+    OLLAMA_HOST: str = "localhost"
+    OLLAMA_PORT: int = 11434
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+    EMBEDDING_MODEL: str = "bge-m3"
+    EMBEDDING_DIMENSIONS: int = 1024
+    VECTOR_INDEX_NAME: str = "chunks_vector_index"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

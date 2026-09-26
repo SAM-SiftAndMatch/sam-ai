@@ -68,3 +68,43 @@ class ChunkContextResponse(BaseModel):
         ...,
         description="Category-specific chunks dynamically fetched based on client industry",
     )
+
+
+class ChunkSearchItem(BaseModel):
+    """Chunk result with similarity score."""
+
+    id: str = Field(..., description="Stable hash ID")
+    text: str = Field(..., description="Chunk text")
+    metadata: ChunkMetadata
+    score: float | None = Field(
+        default=None, description="Vector similarity score (0.0 to 1.0)"
+    )
+
+
+class ChunkSearchRequest(BaseModel):
+    """Request model for semantic vector search."""
+
+    query: str = Field(..., min_length=2, description="User search query")
+    category: str | None = Field(default=None, description="Optional category filter")
+    limit: int = Field(
+        default=3, ge=1, le=20, description="Max relevant category chunks to return"
+    )
+    include_universal: bool = Field(
+        default=True,
+        description="Whether to include universal chunks in response",
+    )
+
+
+class ChunkSearchResponse(BaseModel):
+    """Hybrid response: Universal chunks + Relevant category chunks from vector search."""
+
+    query: str = Field(..., description="Original search query")
+    universal: list[ChunkResponse] = Field(
+        default_factory=list,
+        description="Universal chunks to be hard-injected into prompt",
+    )
+    relevant_chunks: list[ChunkSearchItem] = Field(
+        default_factory=list,
+        description="Top-K category chunks retrieved via vector similarity search",
+    )
+    total_relevant: int = Field(..., description="Count of relevant chunks returned")

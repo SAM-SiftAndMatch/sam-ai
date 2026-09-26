@@ -5,8 +5,12 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.db.mongodb import get_database
 from app.schemas.chunk import (
+    ChunkContextResponse,
     ChunkListResponse,
     ChunkResponse,
+    ChunkSearchItem,
+    ChunkSearchRequest,
+    ChunkSearchResponse,
     ChunkStatsResponse,
     SeedResponse,
 )
@@ -86,6 +90,88 @@ async def get_stats(
     service: ChunkService = Depends(get_chunk_service),
 ) -> ChunkStatsResponse:
     return await service.get_stats()
+
+
+@router.get(
+    "/context",
+    response_model=ChunkContextResponse,
+    summary="Get 2-tier context for brief generation",
+    description="Retrieve universal chunks alongside category-specific chunks for brief generation wizard.",
+)
+async def get_brief_context(
+    category: str | None = Query(
+        default=None,
+        description="Target category (e.g. 'website_ban_hang', 'crm', 'app_dat_lich')",
+    ),
+    service: ChunkService = Depends(get_chunk_service),
+) -> ChunkContextResponse:
+    universal, cat_specific = await service.get_brief_context(category=category)
+    return ChunkContextResponse(
+        universal=[
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in universal
+        ],
+        category_specific=[
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in cat_specific
+        ],
+    )
+
+
+@router.post(
+    "/search",
+    response_model=ChunkSearchResponse,
+    summary="Semantic vector search",
+    description="Search chunks using Ollama bge-m3 dense vector embeddings and MongoDB Atlas Vector Search.",
+)
+async def semantic_search(
+    body: ChunkSearchRequest,
+    service: ChunkService = Depends(get_chunk_service),
+) -> ChunkSearchResponse:
+    universal_items: list[ChunkResponse] = []
+    if body.include_universal:
+        raw_universal = await service.get_universal_chunks()
+        universal_items = [
+            ChunkResponse(
+                id=c.id,
+                text=c.text,
+                embedding=c.embedding,
+                metadata=c.metadata,
+            )
+            for c in raw_universal
+        ]
+
+    search_results = await service.semantic_search(
+        query_text=body.query,
+        category=body.category,
+        limit=body.limit,
+    )
+    relevant_items = [
+        ChunkSearchItem(
+            id=item["id"],
+            text=item["text"],
+            metadata=item["metadata"],
+            score=item.get("score"),
+        )
+        for item in search_results
+    ]
+
+    return ChunkSearchResponse(
+        query=body.query,
+        universal=universal_items,
+        relevant_chunks=relevant_items,
+        total_relevant=len(relevant_items),
+    )
 
 
 @router.get(
