@@ -1,4 +1,4 @@
-.PHONY: help install install-dev run dev test lint format clean docker-build docker-run docker-stop compose-up compose-down compose-logs pre-commit-install pre-commit-run
+.PHONY: help install install-dev run dev seed-embed test lint format clean docker-build docker-run docker-stop compose-up compose-down compose-logs pre-commit-install pre-commit-run
 
 PYTHON ?= .venv/bin/python
 PIP ?= .venv/bin/pip
@@ -29,6 +29,9 @@ dev: ## Chạy server FastAPI ở chế độ development (auto-reload)
 
 run: ## Chạy server FastAPI production
 	$(PYTHON) main.py
+
+seed-embed: ## Chạy all-in-one pipeline: tạo embedding Ollama và seed vào MongoDB
+	$(PYTHON) scripts/seed_and_embed_chunks.py
 
 test: ## Chạy test suite với pytest
 	$(PYTEST) -v

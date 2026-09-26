@@ -148,11 +148,19 @@ make compose-down
 Hệ thống quản lý dữ liệu tri thức sản phẩm phục vụ Smart Brief Wizard:
 
 ### 1. Quản lý dữ liệu qua CLI Scripts
-- **Seed dữ liệu vào MongoDB Atlas**:
+- **⚡ All-in-One (Khuyên dùng): Sinh Embedding Ollama + Seed vào MongoDB Atlas**:
+  ```bash
+  # Cách 1: Dùng lệnh make
+  make seed-embed
+
+  # Cách 2: Gọi script trực tiếp (hỗ trợ tùy chọn --drop-first, --force-reembed, ...)
+  python scripts/seed_and_embed_chunks.py --batch-size 10
+  ```
+- **Tùy chọn riêng lẻ 1 — Chỉ seed dữ liệu vào MongoDB Atlas**:
   ```bash
   python scripts/seed_chunks.py --file data/kb-chunks.jsonl
   ```
-- **Sinh vector embedding với Ollama (`bge-m3`)**:
+- **Tùy chọn riêng lẻ 2 — Chỉ sinh vector embedding qua Ollama (`bge-m3`)**:
   ```bash
   python scripts/embed_chunks.py --file data/kb-chunks.jsonl --batch-size 10
   ```
