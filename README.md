@@ -174,3 +174,14 @@ Hệ thống quản lý dữ liệu tri thức sản phẩm phục vụ Smart Br
 | `GET` | `/api/v1/chunks/stats` | Thống kê số lượng chunks theo category, dimension, source |
 | `POST` | `/api/v1/chunks/search` | Tìm kiếm ngữ nghĩa vector (Hybrid: Atlas Vector Search + Cosine fallback) |
 | `GET` | `/api/v1/chunks/{chunk_id}` | Lấy chi tiết một chunk theo hash ID |
+
+---
+
+## 🧙 Smart Brief Wizard API (`/api/v1/brief`)
+
+Trợ lý thông minh khai thác ý tưởng khách hàng và tự động tạo Brief dự án:
+
+| Phương thức | Endpoint | Mô tả |
+|-------------|----------|-------|
+| `POST` | `/api/v1/brief/discovery` | Tiếp nhận ý tưởng sơ khai (VD: `"web bán đồ ăn"`), phân loại danh mục và trả về bộ câu hỏi khảo sát tương tác kèm lựa chọn có sẵn |
+| `POST` | `/api/v1/brief/generate` | Tổng hợp câu trả lời của khách hàng và tri thức kỹ thuật thành bản Brief chuẩn + ước lượng Timeline & Ngân sách |

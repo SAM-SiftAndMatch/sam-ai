@@ -38,6 +38,15 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSIONS: int = 1024
     VECTOR_INDEX_NAME: str = "chunks_vector_index"
 
+    # LLM Generative Settings
+    LLM_PROVIDER: str = "ollama"  # "ollama" | "gemini" | "openai"
+    LLM_MODEL: str = "qwen2.5:3b"
+    LLM_BASE_URL: str = "http://localhost:11434"
+    LLM_API_KEY: str | None = None
+    LLM_TEMPERATURE: float = 0.3
+    LLM_MAX_TOKENS: int = 4096
+    LLM_TIMEOUT: float = 90.0
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
