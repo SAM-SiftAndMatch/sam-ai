@@ -427,7 +427,7 @@ class BriefService:
                 ]
                 questions.append(
                     DiscoveryQuestion(
-                        id=item.get("id", f"q_{len(questions)+1}"),
+                        id=item.get("id", f"q_{len(questions) + 1}"),
                         group=item.get("group", "Khảo sát"),
                         question=item.get("question", ""),
                         type=item.get("type", "single_choice"),
