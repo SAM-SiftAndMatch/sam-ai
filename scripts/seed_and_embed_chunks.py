@@ -12,9 +12,9 @@ import sys
 import time
 from pathlib import Path
 
+import certifi
 from pymongo import ASCENDING, MongoClient
 from pymongo.server_api import ServerApi
-import certifi
 
 # Add project root to sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
