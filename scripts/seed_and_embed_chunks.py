@@ -130,7 +130,9 @@ async def run_seed_and_embed(
     )
 
     server_api = ServerApi("1")
-    client: MongoClient = MongoClient(uri, server_api=server_api, tlsCAFile=certifi.where())
+    client: MongoClient = MongoClient(
+        uri, server_api=server_api, tlsCAFile=certifi.where()
+    )
     db = client[database_name]
     collection = db["chunks"]
 
