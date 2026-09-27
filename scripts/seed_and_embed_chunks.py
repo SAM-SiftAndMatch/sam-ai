@@ -12,6 +12,7 @@ import sys
 import time
 from pathlib import Path
 
+import certifi
 from pymongo import ASCENDING, MongoClient
 from pymongo.server_api import ServerApi
 
@@ -129,7 +130,9 @@ async def run_seed_and_embed(
     )
 
     server_api = ServerApi("1")
-    client: MongoClient = MongoClient(uri, server_api=server_api)
+    client: MongoClient = MongoClient(
+        uri, server_api=server_api, tlsCAFile=certifi.where()
+    )
     db = client[database_name]
     collection = db["chunks"]
 
